@@ -94,6 +94,9 @@ namespace WSNukaxan.Controllers
                     Real = dtR["ValorResultado"].ToString(),
                     NomNutriment = dtR["NomParametro"].ToString()
                 };
+                if (!String.IsNullOrEmpty(gResp.Crono)) {
+                    gResp.Crono = gResp.Crono.Substring (gResp.Crono.IndexOf ("-")+1,gResp.Crono.Length-1 - gResp.Crono.IndexOf("-"));
+                }
                 lstResp.Add(gResp);
             }
 
@@ -115,6 +118,7 @@ namespace WSNukaxan.Controllers
 
             string strSQL="";
             strSQL += "AND tbl.CodCliente = '" + strCodCliente + "' ";
+            strSQL += "AND ((C.CveTipoP=1 AND M.CveEstatus IN(31,33)) OR C.CveTipoP=2) ";
             if (!String.IsNullOrEmpty(strCodProducto))
             {
                 string fstrCodProducto = string.Join(",", strCodProducto.Split(",").Select(p => "'" + p + "'"));
@@ -148,14 +152,15 @@ namespace WSNukaxan.Controllers
             return  myDate.ToString("yyyy-MM-dd");
 
         }
+        
         private static string GetTablaRelacion()
         {
             string strSQL = " FROM Nireo_SesionesMuestreo tbl ";
             strSQL += "INNER JOIN Nireo_Muestras M ON M.CveSesion = tbl.CveSesion ";
             strSQL += "INNER JOIN Nireo_Muestras_Resultados R ON R.CveMuestra = M.CveMuestra ";
             strSQL += "INNER JOIN CatClientes_Origenes CO ON CO.CveOrigen = tbl.CveOrigen ";
-            strSQL += "INNER JOIN PerfilCliente_Nireo_Proveedores P ON P.CveProveedor = tbl.CveProveedor ";
-            strSQL += "INNER JOIN PerfilCliente_Nireo_Productos PCP ON PCP.CodCliente = tbl.CodCliente ";
+            strSQL += "INNER JOIN PerfilCliente_Nireo_Proveedores P ON P.CveProveedor = tbl.CveProveedor AND P.CodCliente=tbl.CodCliente ";
+            strSQL += "INNER JOIN PerfilCliente_Nireo_Productos PCP ON PCP.CodCliente = tbl.CodCliente AND PCP.CveProducto = tbl.CveProducto ";
             strSQL += "INNER JOIN CatNireo_Productos_Categorias C ON C.CveCategoriaP = PCP.CveCategoriaP ";
             strSQL += "INNER JOIN CatNireo_Parametros Pa ON Pa.CveParametro = R.CveParametro ";
             return strSQL;
