@@ -115,6 +115,9 @@ namespace WSNukaxan.Controllers
             string strLote = "";
             string strFecIni = GetFechaFiltro(resultadoFiltroModel.FechaInicio); //''"2024-07-25";
             string strFecFin = GetFechaFiltro(resultadoFiltroModel.FechaFin); // "2024-07-25";
+            string strNutriment = resultadoFiltroModel.Analisis;
+            string strOrigen = resultadoFiltroModel.Origen;
+            string strProveedor = resultadoFiltroModel.Proveedor;
 
             string strSQL="";
             strSQL += "AND tbl.CodCliente = '" + strCodCliente + "' ";
@@ -135,6 +138,19 @@ namespace WSNukaxan.Controllers
             if (!String.IsNullOrEmpty(strLote))
             {
                 strSQL += "AND tbl.Lote LIKE '" + strLote + "' ";
+            }
+            if (!String.IsNullOrEmpty(strOrigen))
+            {
+                strSQL += "AND Co.NomOrigen LIKE '" + strOrigen + "' ";
+            }
+            if (!String.IsNullOrEmpty(strProveedor))
+            {
+                strSQL += "AND P.NomProveedor LIKE '" + strProveedor + "' ";
+            }
+            if (!String.IsNullOrEmpty(strNutriment))
+            {
+                string fstrCodNutriment = string.Join(",", strNutriment.Split(",").Select(p => "'" + p + "'"));
+                strSQL += "AND Pa.CodParametro IN ( " + fstrCodNutriment + ") ";
             }
             if (!String.IsNullOrEmpty(strFecIni) && !String.IsNullOrEmpty(strFecFin))
             {
@@ -166,5 +182,77 @@ namespace WSNukaxan.Controllers
             return strSQL;
         }
 
+
+        [HttpPost]
+        [Route("api/catalogo/grafica/origen")]
+        public List<CatalogoModel> GetCatOrigen([FromBody] ResultadoFiltroModel objReq)
+        {
+            return GetCatOrigenData(objReq);
+        }
+
+
+        private List<CatalogoModel> GetCatOrigenData(ResultadoFiltroModel resultadoFiltroModel)
+        {
+            string strSQL = "SELECT DISTINCT Co.NomOrigen ";
+            strSQL += GetTablaRelacion();
+            strSQL += "WHERE 1=1 ";
+
+            strSQL += GetCondicionFiltros(resultadoFiltroModel);
+
+            strSQL += "ORDER BY Co.NomOrigen ASC ";
+
+            DataTable dt1 = Database.execQuery(strSQL);
+
+            List<CatalogoModel> lstResp = new List<CatalogoModel>();
+            foreach (DataRow dtR in dt1.Rows)
+            {
+                CatalogoModel gResp = new CatalogoModel
+                {
+                    Clave  = dtR["NomOrigen"].ToString(),
+                    Descripcion  = dtR["NomOrigen"].ToString()
+                };              
+                lstResp.Add(gResp);
+            }
+            return lstResp;
+        }
+
+        [HttpPost]
+        [Route("api/catalogo/grafica/proveedor")]
+        public List<CatalogoModel> GetCatProveedor([FromBody] ResultadoFiltroModel objReq)
+        {
+            return GetCatProveedorData(objReq);
+        }
+
+        private List<CatalogoModel> GetCatProveedorData(ResultadoFiltroModel resultadoFiltroModel)
+        {
+            string strSQL = "SELECT DISTINCT P.NomProveedor ";
+            strSQL += GetTablaRelacion();
+            strSQL += "WHERE 1=1 ";
+
+            strSQL += GetCondicionFiltros(resultadoFiltroModel);
+
+            strSQL += "ORDER BY P.NomProveedor ASC ";
+
+            DataTable dt1 = Database.execQuery(strSQL);
+
+            List<CatalogoModel> lstResp = new List<CatalogoModel>();
+            foreach (DataRow dtR in dt1.Rows)
+            {
+                CatalogoModel gResp = new CatalogoModel
+                {
+                    Clave = dtR["NomProveedor"].ToString(),
+                    Descripcion = dtR["NomProveedor"].ToString()
+                };
+                lstResp.Add(gResp);
+            }
+            return lstResp;
+        }
+
+
+
+
     }
+
+
+
 }
