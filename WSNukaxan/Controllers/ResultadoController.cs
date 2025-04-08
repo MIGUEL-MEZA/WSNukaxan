@@ -9,26 +9,11 @@ using WSNukaxan.Model;
 
 namespace WSNukaxan.Controllers
 {
-    public class GraficaController : Controller
+    public class ResultadoController : Controller
     {
 
-        [HttpPost]
-        [Route("api/analisis")]
-        public List<GraficoAnalisisModel> GetAnalisis([FromBody] ResultadoFiltroModel objReq)
-        {
 
-            if (objReq == null) throw new Exception("Dato incorrecto en la entrada");
-
-            return GetData(objReq);
-        }
-
-        [HttpPost]
-        [Route("api/count")]
-        public List<RegistrosClienteProducto> GetCount([FromBody] ResultadoFiltroModel objReq)
-        {
-            if (objReq == null) throw new Exception("Dato incorrecto en la entrada");
-            return GetCountAnalisis(objReq);
-        }
+  
 
         private static List<RegistrosClienteProducto> GetCountAnalisis(ResultadoFiltroModel resultadoFiltroModel)
         {
@@ -184,133 +169,8 @@ namespace WSNukaxan.Controllers
         }
 
 
-        [HttpPost]
-        [Route("api/catalogo/grafica/origen")]
-        public List<CatalogoModel> GetCatOrigen([FromBody] ResultadoFiltroModel objReq)
-        {
-            return GetCatOrigenData(objReq);
-        }
+        
 
-
-        private List<CatalogoModel> GetCatOrigenData(ResultadoFiltroModel resultadoFiltroModel)
-        {
-            string strSQL = "SELECT DISTINCT Co.NomOrigen ";
-            strSQL += GetTablaRelacion();
-            strSQL += "WHERE 1=1 ";
-
-            strSQL += GetCondicionFiltros(resultadoFiltroModel);
-
-            strSQL += "ORDER BY Co.NomOrigen ASC ";
-
-            DataTable dt1 = Database.execQuery(strSQL);
-
-            List<CatalogoModel> lstResp = new List<CatalogoModel>();
-            foreach (DataRow dtR in dt1.Rows)
-            {
-                CatalogoModel gResp = new CatalogoModel
-                {
-                    Clave  = dtR["NomOrigen"].ToString(),
-                    Descripcion  = dtR["NomOrigen"].ToString()
-                };              
-                lstResp.Add(gResp);
-            }
-            return lstResp;
-        }
-
-        [HttpPost]
-        [Route("api/catalogo/grafica/proveedor")]
-        public List<CatalogoModel> GetCatProveedor([FromBody] ResultadoFiltroModel objReq)
-        {
-            return GetCatProveedorData(objReq);
-        }
-
-        private List<CatalogoModel> GetCatProveedorData(ResultadoFiltroModel resultadoFiltroModel)
-        {
-            string strSQL = "SELECT DISTINCT P.NomProveedor ";
-            strSQL += GetTablaRelacion();
-            strSQL += "WHERE 1=1 ";
-
-            strSQL += GetCondicionFiltros(resultadoFiltroModel);
-
-            strSQL += "ORDER BY P.NomProveedor ASC ";
-
-            DataTable dt1 = Database.execQuery(strSQL);
-
-            List<CatalogoModel> lstResp = new List<CatalogoModel>();
-            foreach (DataRow dtR in dt1.Rows)
-            {
-                CatalogoModel gResp = new CatalogoModel
-                {
-                    Clave = dtR["NomProveedor"].ToString(),
-                    Descripcion = dtR["NomProveedor"].ToString()
-                };
-                lstResp.Add(gResp);
-            }
-            return lstResp;
-        }
-
-        [HttpPost]
-        [Route("api/catalogo/grafica/nutriment")]
-        public List<CatalogoModel> GetCatNutriment([FromBody] ResultadoFiltroModel objReq)
-        {
-            return GetCatNutrimentData(objReq);
-        }
-
-        private List<CatalogoModel> GetCatNutrimentData(ResultadoFiltroModel resultadoFiltroModel)
-        {
-            string strSQL = "SELECT DISTINCT CodParametro,NomParametro   ";
-            strSQL += GetTablaRelacion();
-            strSQL += "WHERE 1=1 ";
-
-            strSQL += GetCondicionFiltros(resultadoFiltroModel);
-
-            strSQL += "ORDER BY NomParametro ASC ";
-
-            DataTable dt1 = Database.execQuery(strSQL);
-
-            List<CatalogoModel> lstResp = new List<CatalogoModel>();
-            foreach (DataRow dtR in dt1.Rows)
-            {
-                CatalogoModel gResp = new CatalogoModel
-                {
-                    Clave = dtR["CodParametro"].ToString(),
-                    Descripcion = dtR["NomParametro"].ToString()
-                };
-                lstResp.Add(gResp);
-            }
-            return lstResp;
-        }
-
-        [HttpPost]
-        [Route("api/catalogo/grafica/producto")]
-        public List<CatalogoModel> GetCatProducto([FromBody] ResultadoFiltroModel objReq)
-        {
-            return GetCatProductoData(objReq);
-        }
-        private List<CatalogoModel> GetCatProductoData(ResultadoFiltroModel resultadoFiltroModel)
-        {
-            string strSQL = "SELECT DISTINCT CodProducto,NomProducto  ";
-            strSQL += GetTablaRelacion();
-            strSQL += "WHERE 1=1 ";
-
-            strSQL += GetCondicionFiltros(resultadoFiltroModel);
-
-            strSQL += "ORDER BY NomProducto ASC ";
-
-            DataTable dt1 = Database.execQuery(strSQL);
-
-            List<CatalogoModel> lstResp = new List<CatalogoModel>();
-            foreach (DataRow dtR in dt1.Rows)
-            {
-                CatalogoModel gResp = new CatalogoModel
-                {
-                    Clave = dtR["CodProducto"].ToString(),
-                    Descripcion = dtR["NomProducto"].ToString()
-                };
-                lstResp.Add(gResp);
-            }
-            return lstResp;
-        }
 
     }
 
