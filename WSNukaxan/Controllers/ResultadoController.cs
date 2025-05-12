@@ -13,7 +13,7 @@ namespace WSNukaxan.Controllers
     {
 
 
-  
+
 
         private static List<RegistrosClienteProducto> GetCountAnalisis(ResultadoFiltroModel resultadoFiltroModel)
         {
@@ -46,7 +46,7 @@ namespace WSNukaxan.Controllers
 
         private List<GraficoAnalisisModel> GetData(ResultadoFiltroModel resultadoFiltroModel)
         {
-            
+
             string strSQL = "SELECT tbl.CodCliente,tbl.CveProducto,PCP.CveCategoriaP,PCP.CodProducto,PCP.NomProducto ";
             strSQL += ",C.CodCategoriaP,C.NomCategoriaP,tbl.Identificacion,tbl.FecMuestreo,tbl.Referencia,tbl.Lote ";
             strSQL += ",tbl.CveOrigen,Co.NomOrigen,tbl.CveProveedor,P.NomProveedor,R.CveParametro,Pa.CodParametro ";
@@ -54,14 +54,15 @@ namespace WSNukaxan.Controllers
             strSQL += GetTablaRelacion();
             strSQL += "WHERE 1=1 ";
 
-            strSQL+= GetCondicionFiltros(resultadoFiltroModel);
-            
+            strSQL += GetCondicionFiltros(resultadoFiltroModel);
+
             strSQL += "ORDER BY tbl.FecMuestreo ASC ";
 
-            DataTable dt1= Database.execQuery(strSQL);
+            DataTable dt1 = Database.execQuery(strSQL);
 
             List<GraficoAnalisisModel> lstResp = new List<GraficoAnalisisModel>();
-            foreach (DataRow dtR in dt1.Rows) {
+            foreach (DataRow dtR in dt1.Rows)
+            {
                 GraficoAnalisisModel gResp = new GraficoAnalisisModel
                 {
                     NomProducto = dtR["NomProducto"].ToString(),
@@ -72,22 +73,23 @@ namespace WSNukaxan.Controllers
                     CodProduto = dtR["CodProducto"].ToString(),
                     Crono = dtR["Referencia"].ToString(),
                     Esperado = dtR["ValorEsperado"].ToString(),
-                    Fecha = ((DateTime )dtR["FecMuestreo"]).ToString("dd/MM/yyyy"),
+                    Fecha = ((DateTime)dtR["FecMuestreo"]).ToString("dd/MM/yyyy"),
                     Maximo = dtR["ValorMax"].ToString(),
                     Minimo = dtR["ValorMin"].ToString(),
                     NomAnalisis = "",
                     Real = dtR["ValorResultado"].ToString(),
                     NomNutriment = dtR["NomParametro"].ToString()
                 };
-                if (!String.IsNullOrEmpty(gResp.Crono)) {
-                    gResp.Crono = gResp.Crono.Substring (gResp.Crono.IndexOf ("-")+1,gResp.Crono.Length-1 - gResp.Crono.IndexOf("-"));
+                if (!String.IsNullOrEmpty(gResp.Crono))
+                {
+                    gResp.Crono = gResp.Crono.Substring(gResp.Crono.IndexOf("-") + 1, gResp.Crono.Length - 1 - gResp.Crono.IndexOf("-"));
                 }
                 lstResp.Add(gResp);
             }
 
             return lstResp;
 
-            
+
 
         }
 
@@ -104,7 +106,7 @@ namespace WSNukaxan.Controllers
             string strOrigen = resultadoFiltroModel.Origen;
             string strProveedor = resultadoFiltroModel.Proveedor;
 
-            string strSQL="";
+            string strSQL = "";
             strSQL += "AND tbl.CodCliente = '" + strCodCliente + "' ";
             strSQL += "AND ((C.CveTipoP=1 AND M.CveEstatus IN(31,33)) OR C.CveTipoP=2) ";
             if (!String.IsNullOrEmpty(strCodProducto))
@@ -145,21 +147,22 @@ namespace WSNukaxan.Controllers
             return strSQL;
         }
 
-        private static string GetFechaFiltro(String strFecha) {
+        private static string GetFechaFiltro(String strFecha)
+        {
             if (String.IsNullOrEmpty(strFecha)) return "";
             var splittedDateTime = strFecha.Split('/');
             DateTime myDate = new DateTime(int.Parse(splittedDateTime[2]), int.Parse(splittedDateTime[1]), int.Parse(splittedDateTime[0]));
-            
-            return  myDate.ToString("yyyy-MM-dd");
+
+            return myDate.ToString("yyyy-MM-dd");
 
         }
-        
+
         private static string GetTablaRelacion()
         {
             string strSQL = " FROM Nireo_SesionesMuestreo tbl ";
             strSQL += "INNER JOIN Nireo_Muestras M ON M.CveSesion = tbl.CveSesion ";
             strSQL += "INNER JOIN Nireo_Muestras_Resultados R ON R.CveMuestra = M.CveMuestra ";
-            strSQL += "INNER JOIN CatClientes_Origenes CO ON CO.CveOrigen = tbl.CveOrigen ";
+            strSQL += "INNER JOIN CatNireo_Origenes CO ON CO.CveOrigen = tbl.CveOrigen ";
             strSQL += "INNER JOIN PerfilCliente_Nireo_Proveedores P ON P.CveProveedor = tbl.CveProveedor AND P.CodCliente=tbl.CodCliente ";
             strSQL += "INNER JOIN PerfilCliente_Nireo_Productos PCP ON PCP.CodCliente = tbl.CodCliente AND PCP.CveProducto = tbl.CveProducto ";
             strSQL += "INNER JOIN CatNireo_Productos_Categorias C ON C.CveCategoriaP = PCP.CveCategoriaP ";
@@ -169,7 +172,7 @@ namespace WSNukaxan.Controllers
         }
 
 
-        
+
 
 
     }
