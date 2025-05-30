@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Data;
+using System.Globalization;
 using System.Runtime.Intrinsics.Arm;
 using System.Text.RegularExpressions;
 using WSNukaxan.App_Data;
@@ -9,87 +10,235 @@ using WSNukaxan.Model;
 
 namespace WSNukaxan.Controllers
 {
+
     public class ResultadoController : Controller
     {
+        
 
-
-
-
-        private static List<RegistrosClienteProducto> GetCountAnalisis(ResultadoFiltroModel resultadoFiltroModel)
+        [HttpPost]
+        [Route("api/resultado/resumen/producto")]
+        public List<ResumenProductoModel> GetResumenProducto([FromBody]  ResultadoFiltroModel resultadoFiltroModel)
         {
 
-            string strSQL = "SELECT tbl.CodCliente,PCP.CodProducto,Pa.NomParametro,Count(1) as Total  ";
+            string strSQL = "SELECT IIF(C.CveTipoP ='1', 'Materia Prima','Producto terminado') as TYPE , ";
+            strSQL += " IIF(ValorResultado NOT between R.ValorMin AND R.ValorMax, 'Fuera','Dentro') as ESPECIFICACION , Count(1) as CANTIDAD ";
+
             strSQL += GetTablaRelacion();
             strSQL += "WHERE 1=1 ";
+
             strSQL += GetCondicionFiltros(resultadoFiltroModel);
-            strSQL += "GROUP BY tbl.CodCliente,PCP.CodProducto,Pa.NomParametro ";
-            strSQL += "ORDER BY CodCliente, CodProducto, NomParametro ";
+
+            strSQL += "GROUP BY IIF(C.CveTipoP = '1', 'Materia Prima', 'Producto terminado'),  IIF(ValorResultado NOT between R.ValorMin AND R.ValorMax, 'Fuera', 'Dentro')";
+            
 
             DataTable dt1 = Database.execQuery(strSQL);
 
-            List<RegistrosClienteProducto> lstResp = new();
-            foreach (DataRow dtR in dt1.Rows)
+            List<ResumenProductoModel> lstResp = new List<ResumenProductoModel>();
+            foreach (DataRow it in dt1.Rows)
             {
-                RegistrosClienteProducto gResp = new RegistrosClienteProducto
-                {
-                    Cliente = dtR["CodCliente"].ToString(),
-                    Producto = dtR["CodProducto"].ToString(),
-                    Analisis = dtR["NomParametro"].ToString(),
-                    Total = dtR["Total"].ToString()
-                };
-                lstResp.Add(gResp);
+
+                ResumenProductoModel envioC = new ResumenProductoModel();
+                envioC.TipoProducto = it["TYPE"].ToString();
+                envioC.Plan = "0"; //it["LIE_PLAN"].ToString();
+                envioC.Especificacion = it["ESPECIFICACION"].ToString();
+                envioC.Cantidad = it["CANTIDAD"].ToString();
+
+                lstResp.Add(envioC);
             }
 
             return lstResp;
 
         }
 
-        private List<GraficoAnalisisModel> GetData(ResultadoFiltroModel resultadoFiltroModel)
+        [HttpPost]
+        [Route("api/resultado/resumen/analisis")]
+        public List<ResumenAnalisisModel> GetResumenAnalisis([FromBody] ResultadoFiltroModel resultadoFiltroModel)
         {
 
-            string strSQL = "SELECT tbl.CodCliente,tbl.CveProducto,PCP.CveCategoriaP,PCP.CodProducto,PCP.NomProducto ";
-            strSQL += ",C.CodCategoriaP,C.NomCategoriaP,tbl.Identificacion,tbl.FecMuestreo,tbl.Referencia,tbl.Lote ";
-            strSQL += ",tbl.CveOrigen,Co.NomOrigen,tbl.CveProveedor,P.NomProveedor,R.CveParametro,Pa.CodParametro ";
-            strSQL += ",Pa.NomParametro,R.ValorResultado,R.ValorEsperado,R.ValorMin,R.ValorMax ";
+            string strSQL = "SELECT PCP.CodProducto,PCP.NomProducto,Pa.NomParametro, COUNT(1) as TOTAL, ";
+            strSQL += "CAST(AVG(R.ValorResultado) AS VARCHAR(100)) AS PROMEDIO, ";
+            strSQL += "CAST(STDEV(R.ValorResultado) AS VARCHAR(100)) as DESVIACION, CAST(CASE WHEN AVG(R.ValorResultado) = 0 THEN 0 ELSE STDEV(R.ValorResultado) / AVG(R.ValorResultado) * 100 END AS VARCHAR(100)) AS COVARIANZA, ";
+            strSQL += "CAST(MIN(R.ValorResultado) AS VARCHAR(100)) AS MINIMO, CAST(MAX(R.ValorResultado) AS VARCHAR(100)) as MAXIMO,SUM(IIF(ValorResultado NOT between R.ValorMin AND R.ValorMax, 1, 0)) / COUNT(1) * 100 as Especificacion ,COUNT(1) as CANTIDAD ";
+
             strSQL += GetTablaRelacion();
             strSQL += "WHERE 1=1 ";
 
             strSQL += GetCondicionFiltros(resultadoFiltroModel);
 
-            strSQL += "ORDER BY tbl.FecMuestreo ASC ";
+            strSQL += "GROUP BY PCP.CodProducto,PCP.NomProducto,Pa.NomParametro ";
+
 
             DataTable dt1 = Database.execQuery(strSQL);
 
-            List<GraficoAnalisisModel> lstResp = new List<GraficoAnalisisModel>();
-            foreach (DataRow dtR in dt1.Rows)
+            List<ResumenAnalisisModel> lstResp = new List<ResumenAnalisisModel>();
+            foreach (DataRow it in dt1.Rows)
             {
-                GraficoAnalisisModel gResp = new GraficoAnalisisModel
-                {
-                    NomProducto = dtR["NomProducto"].ToString(),
-                    CodNutriment = dtR["CodParametro"].ToString(),
-                    ChoixValeur = "",
-                    CodAnalisis = "",
-                    CodCliente = dtR["CodCliente"].ToString(),
-                    CodProduto = dtR["CodProducto"].ToString(),
-                    Crono = dtR["Referencia"].ToString(),
-                    Esperado = dtR["ValorEsperado"].ToString(),
-                    Fecha = ((DateTime)dtR["FecMuestreo"]).ToString("dd/MM/yyyy"),
-                    Maximo = dtR["ValorMax"].ToString(),
-                    Minimo = dtR["ValorMin"].ToString(),
-                    NomAnalisis = "",
-                    Real = dtR["ValorResultado"].ToString(),
-                    NomNutriment = dtR["NomParametro"].ToString()
-                };
-                if (!String.IsNullOrEmpty(gResp.Crono))
-                {
-                    gResp.Crono = gResp.Crono.Substring(gResp.Crono.IndexOf("-") + 1, gResp.Crono.Length - 1 - gResp.Crono.IndexOf("-"));
-                }
-                lstResp.Add(gResp);
+
+                ResumenAnalisisModel envioC = new ResumenAnalisisModel();
+                envioC.CodProducto = it["CodProducto"].ToString();
+                envioC.NomProducto = it["NomProducto"].ToString();
+                envioC.Analisis = it["NomParametro"].ToString();
+                envioC.Total = it["TOTAL"].ToString();
+                envioC.Promedio = it["PROMEDIO"].ToString();
+                envioC.Desviacion = it["DESVIACION"].ToString();
+                envioC.Covarianza  = it["COVARIANZA"].ToString();
+                envioC.Minimo = it["MINIMO"].ToString();
+                envioC.Maximo = it["MAXIMO"].ToString();
+                envioC.Especificacion = it["Especificacion"].ToString();
+                envioC.Cantidad = it["CANTIDAD"].ToString();
+
+                
+
+                lstResp.Add(envioC);
             }
 
             return lstResp;
 
+        }
 
+
+        [HttpPost]
+        [Route("api/resultado/completo")]
+        public List<EnvioCompletoModel> GetCompleto([FromBody] ResultadoFiltroModel resultadoFiltroModel)
+        {
+
+            string strSQL = "SELECT  PCP.CodProducto,PCP.NomProducto ,R.ValorResultado,R.ValorEsperado,R.ValorMin,R.ValorMax ";
+            strSQL+= ", tbl.CodCliente,tbl.CveProducto,PCP.CveCategoriaP,C.CodCategoriaP,C.NomCategoriaP,tbl.Identificacion,CONVERT(VARCHAR(10), tbl.FecMuestreo,101) as FecMuestreo,tbl.Referencia,tbl.Lote ";
+            strSQL += ",tbl.CveOrigen,Co.NomOrigen,tbl.CveProveedor,P.NomProveedor,R.CveParametro,Pa.CodParametro ";
+            strSQL += ",Pa.NomParametro ";
+            strSQL += ",C.CveTipoP,T.NomTipoP ";
+            strSQL += ",IIF(ValorResultado NOT between R.ValorMin AND R.ValorMax, 'FN', 'D') ";
+
+            strSQL += GetTablaRelacion();
+            strSQL += "WHERE 1=1 ";
+
+            strSQL += GetCondicionFiltros(resultadoFiltroModel);
+
+
+            DataTable dt1 = Database.execQuery(strSQL);
+
+            List<EnvioCompletoModel> lstResp = new List<EnvioCompletoModel>();
+            foreach (DataRow it in dt1.Rows)
+            {
+
+                EnvioCompletoModel envioC = new EnvioCompletoModel();
+
+                envioC.LienJournal = "";
+                envioC.ValidationState = "1";
+                envioC.LibelleMethode = it["NomParametro"].ToString();
+                envioC.ChoixValeur = "";
+                envioC.ValeurMesure = it["ValorResultado"].ToString();
+                envioC.CodeUnite = "";
+                envioC.ValeurTheorique = it["ValorEsperado"].ToString();
+                envioC.SeuilMini = it["ValorMin"].ToString();
+                envioC.SeuilMaxi = it["ValorMax"].ToString();
+                envioC.AnalyseEffectue = "1";
+                envioC.DateRealisation = it["FecMuestreo"].ToString();
+                envioC.LibelleLabo = "EURO-NUTEC";
+                envioC.Methode = it["Identificacion"].ToString();
+                envioC.RefMethode = it["Referencia"].ToString();
+                envioC.ValComment = "";
+                envioC.Nuevo = "";
+                envioC.NumChrono = "";
+                envioC.Commentaire = "";
+                envioC.RemisPar = "";
+                envioC.ReferenceExterne = it["Referencia"].ToString();
+                envioC.LienJournalEchant = "";
+                envioC.LibelleOrigine = it["NomOrigen"].ToString();
+                envioC.DateEchantillon = it["FecMuestreo"].ToString();
+                envioC.DatePrelevement = it["FecMuestreo"].ToString();
+                envioC.LibelleFournisseurClient =  "";
+                envioC.CodeProduit = it["CodProducto"].ToString();
+                envioC.LibelleProduit = it["NomProducto"].ToString();
+                envioC.LibelleProprietaire = it["NomProveedor"].ToString();
+                envioC.IsSend = "1";
+                envioC.Destinatarios = "";
+                envioC.LibelleClientFacture = "";
+                envioC.Direccion1 = "";
+                envioC.Direccion2 = "";
+                envioC.Direccion3 = "";
+                envioC.CodeClienteFacture = "";
+                envioC.CodeMethode = "";
+                envioC.Lote = it["Lote"].ToString();
+                envioC.LiePlan = it["CveTipoP"].ToString();
+                envioC.TipoProducto = it["NomTipoP"].ToString();
+                envioC.FechaCaducidad =  "";
+                envioC.DateElaboration = it["FecMuestreo"].ToString();
+                envioC.Nutriment = it["NomParametro"].ToString();
+                envioC.CodeFamilia = "";
+                envioC.Especificacion = "";
+
+                lstResp.Add(envioC);
+            }
+
+            return lstResp;
+
+        }
+
+
+        [HttpPost]
+        [Route("api/resultado/completos")]
+        public List<EnvioCompletosModel> GetCompletos([FromBody] ResultadoFiltroModel resultadoFiltroModel)
+        {
+
+            string strSQL = "SELECT  tbl.Referencia, tbl.Nota,CO.NomOrigen,tbl.FecMuestreo, ";
+            strSQL += "p.NomProveedor, PCP.CodProducto, PCP.NomProducto ,tbl.CodCliente ,";
+            strSQL += "tbl.Lote ,t.NomTipoP ,pa.NomParametro ,r.ValorResultado  ,r.ValorEsperado ";
+
+            strSQL += GetTablaRelacion();
+            strSQL += "WHERE 1=1 ";
+
+            strSQL += GetCondicionFiltros(resultadoFiltroModel);
+
+
+            DataTable dt1 = Database.execQuery(strSQL);
+
+            var listaProductosAgrupados = dt1.AsEnumerable()
+           .GroupBy(row => new { NumChrono = row.Field<string>("Referencia"), Commentaire = row.Field<string>("Nota"), Origen = row.Field<string>("NomOrigen")
+           ,FecMuestreo = row.Field<DateTime>("FecMuestreo"), NomProveedor= row.Field<string>("NomProveedor"),
+               CodProducto = row.Field<string>("CodProducto"), NomProducto = row.Field<string>("NomProducto"),
+               CodCliente = row.Field<string>("CodCliente"), Lote = row.Field<string>("Lote"),
+               TipoProducto = row.Field<string>("NomTipoP")
+           })
+           .Select(grupo => new EnvioCompletosModel
+           {
+               NumChrono  = grupo.Key.NumChrono,
+               Commentaire= grupo.Key.Commentaire,
+               ReferenceExterne = grupo.Key.NumChrono,
+               LibelleOrigine = grupo.Key.Origen,
+               DateEchantillon = grupo.Key.FecMuestreo.ToString("dd/MM/yyyy"),
+               DatePrelevement = "",
+               LibelleFournisseurClient = grupo.Key.NomProveedor,
+               CodeProduit = grupo.Key.CodProducto,
+               LibelleProduit = grupo.Key.NomProducto,
+               LibelleProprietaire = "",
+               LibelleClientFacture = grupo.Key.CodCliente,
+               CodeClienteFacture = grupo.Key.CodCliente,
+               Lote = grupo.Key.Lote,
+               LiePlan = "",
+               TipoProducto = grupo.Key.TipoProducto,
+               FechaCaducidad = "",
+               DateElaboration = "",
+               Analisis =  dt1.AsEnumerable()
+            .Where(row => row.Field<string>("Referencia") == grupo.Key.NumChrono && row.Field<string>("CodCliente") == grupo.Key.CodCliente)
+            .Select(row => new EnvioCompletoAnalisisModel
+            {
+                Descripcion = row.Field<string>("NomParametro"),
+                Valor = row.Field<Double>("ValorResultado").ToString(),
+                FueraNorma = "0",
+                ValidationState = "1",
+                Esperado = row.Field<Double>("ValorEsperado").ToString(),
+            })
+            .ToList()
+           })
+           .ToList();
+
+          
+
+
+
+
+            return listaProductosAgrupados;
 
         }
 
@@ -170,7 +319,6 @@ namespace WSNukaxan.Controllers
             strSQL += "INNER JOIN CatNireo_Productos_Tipos T ON T.CveTipoP = C.CveTipoP ";
             return strSQL;
         }
-
 
 
 
