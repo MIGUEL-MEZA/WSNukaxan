@@ -315,6 +315,38 @@ namespace WSNukaxan.Controllers
             return lstResp;
         }
 
+        [HttpPost]
+        [Route("api/catalogo/producto")]
+        public List<ProductoTipo> GetCatProductoTipo([FromBody] ResultadoFiltroModel objReq)
+        {
+            return GetCatProductoTipoData(objReq);
+        }
+        private List<ProductoTipo> GetCatProductoTipoData(ResultadoFiltroModel resultadoFiltroModel)
+        {
+            string strSQL = "SELECT DISTINCT CodProducto,NomProducto,t.NomTipoP ";
+            strSQL += GetTablaRelacion();
+            strSQL += "WHERE 1=1 ";
+
+            strSQL += GetCondicionFiltros(resultadoFiltroModel);
+
+            strSQL += "ORDER BY NomProducto ASC ";
+
+            DataTable dt1 = Database.execQuery(strSQL);
+
+            List<ProductoTipo> lstResp = new List<ProductoTipo>();
+            foreach (DataRow dtR in dt1.Rows)
+            {
+                ProductoTipo gResp = new ProductoTipo
+                {
+                    CodProducto  = dtR["CodProducto"].ToString(),
+                    NomProducto  = dtR["NomProducto"].ToString(),
+                    Tipo  = dtR["NomTipoP"].ToString()
+                };
+                lstResp.Add(gResp);
+            }
+            return lstResp;
+        }
+
     }
 
 

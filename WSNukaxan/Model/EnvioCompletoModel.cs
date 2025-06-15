@@ -1,5 +1,10 @@
-﻿namespace WSNukaxan.Model
+﻿using Newtonsoft.Json;
+using System.Text.Json.Serialization;
+
+namespace WSNukaxan.Model
 {
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
+
     public class EnvioCompletoModel
     {
         public string LienJournal { get; set; }

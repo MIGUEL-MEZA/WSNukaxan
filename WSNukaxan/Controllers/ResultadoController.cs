@@ -39,7 +39,7 @@ namespace WSNukaxan.Controllers
 
                 ResumenProductoModel envioC = new ResumenProductoModel();
                 envioC.TipoProducto = it["TYPE"].ToString();
-                envioC.Plan = "0"; //it["LIE_PLAN"].ToString();
+                envioC.Plan = "1"; //it["LIE_PLAN"].ToString();
                 envioC.Especificacion = it["ESPECIFICACION"].ToString();
                 envioC.Cantidad = it["CANTIDAD"].ToString();
 
@@ -80,8 +80,8 @@ namespace WSNukaxan.Controllers
                 envioC.Analisis = it["NomParametro"].ToString();
                 envioC.Total = it["TOTAL"].ToString();
                 envioC.Promedio = it["PROMEDIO"].ToString();
-                envioC.Desviacion = it["DESVIACION"].ToString();
-                envioC.Covarianza  = it["COVARIANZA"].ToString();
+                envioC.Desviacion = String.IsNullOrEmpty( it["DESVIACION"].ToString())? "0":it["DESVIACION"].ToString();
+                envioC.Covarianza  = String.IsNullOrEmpty(it["COVARIANZA"].ToString()) ? "0" : it["COVARIANZA"].ToString();
                 envioC.Minimo = it["MINIMO"].ToString();
                 envioC.Maximo = it["MAXIMO"].ToString();
                 envioC.Especificacion = it["Especificacion"].ToString();
@@ -133,7 +133,7 @@ namespace WSNukaxan.Controllers
                 envioC.SeuilMini = it["ValorMin"].ToString();
                 envioC.SeuilMaxi = it["ValorMax"].ToString();
                 envioC.AnalyseEffectue = "1";
-                envioC.DateRealisation = it["FecMuestreo"].ToString();
+                envioC.DateRealisation = "";
                 envioC.LibelleLabo = "EURO-NUTEC";
                 envioC.Methode = it["Identificacion"].ToString();
                 envioC.RefMethode = it["Referencia"].ToString();
@@ -145,7 +145,7 @@ namespace WSNukaxan.Controllers
                 envioC.ReferenceExterne = it["Referencia"].ToString();
                 envioC.LienJournalEchant = "";
                 envioC.LibelleOrigine = it["NomOrigen"].ToString();
-                envioC.DateEchantillon = it["FecMuestreo"].ToString();
+                envioC.DateEchantillon = "";
                 envioC.DatePrelevement = it["FecMuestreo"].ToString();
                 envioC.LibelleFournisseurClient =  "";
                 envioC.CodeProduit = it["CodProducto"].ToString();
@@ -163,7 +163,7 @@ namespace WSNukaxan.Controllers
                 envioC.LiePlan = it["CveTipoP"].ToString();
                 envioC.TipoProducto = it["NomTipoP"].ToString();
                 envioC.FechaCaducidad =  "";
-                envioC.DateElaboration = it["FecMuestreo"].ToString();
+                envioC.DateElaboration = "";
                 envioC.Nutriment = it["NomParametro"].ToString();
                 envioC.CodeFamilia = "";
                 envioC.Especificacion = "";
@@ -183,7 +183,7 @@ namespace WSNukaxan.Controllers
 
             string strSQL = "SELECT  tbl.Referencia, tbl.Nota,CO.NomOrigen,tbl.FecMuestreo, ";
             strSQL += "p.NomProveedor, PCP.CodProducto, PCP.NomProducto ,tbl.CodCliente ,";
-            strSQL += "tbl.Lote ,t.NomTipoP ,pa.NomParametro ,r.ValorResultado  ,r.ValorEsperado ";
+            strSQL += "tbl.Lote ,t.NomTipoP ,pa.NomParametro ,r.ValorResultado  ,r.ValorEsperado, r.ValorMin, r.ValorMax ";
 
             strSQL += GetTablaRelacion();
             strSQL += "WHERE 1=1 ";
@@ -206,8 +206,8 @@ namespace WSNukaxan.Controllers
                Commentaire= grupo.Key.Commentaire,
                ReferenceExterne = grupo.Key.NumChrono,
                LibelleOrigine = grupo.Key.Origen,
-               DateEchantillon = grupo.Key.FecMuestreo.ToString("dd/MM/yyyy"),
-               DatePrelevement = "",
+               DateEchantillon = "",
+               DatePrelevement = grupo.Key.FecMuestreo.ToString("dd/MM/yyyy"),
                LibelleFournisseurClient = grupo.Key.NomProveedor,
                CodeProduit = grupo.Key.CodProducto,
                LibelleProduit = grupo.Key.NomProducto,
@@ -227,7 +227,7 @@ namespace WSNukaxan.Controllers
                 Valor = row.Field<Double>("ValorResultado").ToString(),
                 FueraNorma = "0",
                 ValidationState = "1",
-                Esperado = row.Field<Double>("ValorEsperado").ToString(),
+                Esperado = row.Field<Double>("ValorEsperado").ToString()+" | "+row.Field<Double>("ValorMin").ToString() + " | " + row.Field<Double>("ValorMax").ToString(),
             })
             .ToList()
            })
@@ -247,51 +247,60 @@ namespace WSNukaxan.Controllers
             string strCodCliente = resultadoFiltroModel.CodCliente; // "NKC-1";
             string strCodProducto = resultadoFiltroModel.Producto;  //"0MAGMO";
             string strIdentificacion = "";
-            string strReferencia = "";
-            string strLote = "";
+            string strReferencia = resultadoFiltroModel.RefCliente;
+            string strLote = resultadoFiltroModel.Lote;
             string strFecIni = GetFechaFiltro(resultadoFiltroModel.FechaInicio); //''"2024-07-25";
             string strFecFin = GetFechaFiltro(resultadoFiltroModel.FechaFin); // "2024-07-25";
             string strNutriment = resultadoFiltroModel.Analisis;
             string strOrigen = resultadoFiltroModel.Origen;
             string strProveedor = resultadoFiltroModel.Proveedor;
+            string strNumCrono = resultadoFiltroModel.NumCrono;
 
             string strSQL = "";
-            strSQL += "AND tbl.CodCliente = '" + strCodCliente + "' ";
+            
             strSQL += "AND ((C.CveTipoP=1 AND M.CveEstatus IN(31,33)) OR C.CveTipoP=2) ";
-            if (!String.IsNullOrEmpty(strCodProducto))
+            if (!String.IsNullOrEmpty(strNumCrono))
             {
-                string fstrCodProducto = string.Join(",", strCodProducto.Split(",").Select(p => "'" + p + "'"));
-                strSQL += "AND PCP.CodProducto IN ( " + fstrCodProducto + ") ";
+                strSQL += "AND tbl.Referencia = '" + strNumCrono + "' ";
             }
-            if (!String.IsNullOrEmpty(strIdentificacion))
+            else
             {
-                strSQL += "AND tbl.Identificacion LIKE '" + strIdentificacion + "' ";
-            }
-            if (!String.IsNullOrEmpty(strReferencia))
-            {
-                strSQL += "AND tbl.Referencia LIKE '" + strReferencia + "' ";
-            }
-            if (!String.IsNullOrEmpty(strLote))
-            {
-                strSQL += "AND tbl.Lote LIKE '" + strLote + "' ";
-            }
-            if (!String.IsNullOrEmpty(strOrigen))
-            {
-                strSQL += "AND Co.NomOrigen LIKE '" + strOrigen + "' ";
-            }
-            if (!String.IsNullOrEmpty(strProveedor))
-            {
-                strSQL += "AND P.NomProveedor LIKE '" + strProveedor + "' ";
-            }
-            if (!String.IsNullOrEmpty(strNutriment))
-            {
-                string fstrCodNutriment = string.Join(",", strNutriment.Split(",").Select(p => "'" + p + "'"));
-                strSQL += "AND Pa.CodParametro IN ( " + fstrCodNutriment + ") ";
-            }
-            if (!String.IsNullOrEmpty(strFecIni) && !String.IsNullOrEmpty(strFecFin))
-            {
-                strSQL += "AND CONVERT(date, tbl.FecMuestreo,112) ";
-                strSQL += "BETWEEN '" + strFecIni + "' AND '" + strFecFin + "' ";
+                strSQL += "AND tbl.CodCliente = '" + strCodCliente + "' ";
+                if (!String.IsNullOrEmpty(strCodProducto))
+                {
+                    string fstrCodProducto = string.Join(",", strCodProducto.Split(",").Select(p => "'" + p + "'"));
+                    strSQL += "AND PCP.CodProducto IN ( " + fstrCodProducto + ") ";
+                }
+                if (!String.IsNullOrEmpty(strIdentificacion))
+                {
+                    strSQL += "AND tbl.Identificacion LIKE '" + strIdentificacion + "' ";
+                }
+                if (!String.IsNullOrEmpty(strReferencia))
+                {
+                    strSQL += "AND tbl.Referencia LIKE '" + strReferencia + "' ";
+                }
+                if (!String.IsNullOrEmpty(strLote))
+                {
+                    strSQL += "AND tbl.Lote LIKE '" + strLote + "' ";
+                }
+                if (!String.IsNullOrEmpty(strOrigen))
+                {
+                    strSQL += "AND Co.NomOrigen LIKE '" + strOrigen + "' ";
+                }
+                if (!String.IsNullOrEmpty(strProveedor))
+                {
+                    strSQL += "AND P.NomProveedor LIKE '" + strProveedor + "' ";
+                }
+                if (!String.IsNullOrEmpty(strNutriment))
+                {
+                    string fstrCodNutriment = string.Join(",", strNutriment.Split(",").Select(p => "'" + p + "'"));
+                    strSQL += "AND Pa.CodParametro IN ( " + fstrCodNutriment + ") ";
+                }
+                if (!String.IsNullOrEmpty(strFecIni) && !String.IsNullOrEmpty(strFecFin))
+                {
+                    strSQL += "AND CONVERT(date, tbl.FecMuestreo,112) ";
+                    strSQL += "BETWEEN '" + strFecIni + "' AND '" + strFecFin + "' ";
+                }
             }
             return strSQL;
         }
@@ -320,11 +329,108 @@ namespace WSNukaxan.Controllers
             return strSQL;
         }
 
+    
+        [HttpPost]
+        [Route("api/resultado/fn1")]
+        public List<EnvioCompletoModel> GetFueraNormaData1([FromBody] ResultadoFiltroModel resultadoFiltroModel)
+        {
+
+            string strSQL = "SELECT distinct tbl.Referencia,PCP.CodProducto,PCP.NomProducto , tbl.CodCliente,tbl.Identificacion,CONVERT(VARCHAR(10), tbl.FecMuestreo, 101) as FecMuestreo," ;
+            strSQL += "tbl.CveProveedor,P.NomProveedor,NomOrigen ";
+
+            strSQL += GetTablaRelacion();
+            strSQL += "WHERE 1=1 ";
+
+            strSQL += GetCondicionFiltros(resultadoFiltroModel);
 
 
+            DataTable dt1 = Database.execQuery(strSQL);
+
+            List<EnvioCompletoModel> lstResp = new List<EnvioCompletoModel>();
+            foreach (DataRow it in dt1.Rows)
+            {
+
+                EnvioCompletoModel envioC = new EnvioCompletoModel();
+
+                envioC.LienJournal = it["Referencia"].ToString(); 
+                envioC.RefMethode = it["Referencia"].ToString();
+                envioC.ValComment = "";
+                envioC.NumChrono = it["Referencia"].ToString(); ;
+                envioC.Commentaire = "";
+                envioC.RemisPar = "";
+                envioC.ReferenceExterne = it["Referencia"].ToString();
+                envioC.LienJournalEchant = "";
+                envioC.LibelleOrigine = it["NomOrigen"].ToString();
+                envioC.DateEchantillon = "";
+                envioC.DatePrelevement = it["FecMuestreo"].ToString();
+                envioC.LibelleFournisseurClient = "";
+                envioC.CodeProduit = it["CodProducto"].ToString();
+                envioC.LibelleProduit = it["NomProducto"].ToString();
+                envioC.LibelleProprietaire = it["CodCliente"].ToString();
+                envioC.CodeClienteFacture = it["CodCliente"].ToString();
+
+                lstResp.Add(envioC);
+            }
+
+            return lstResp;
+
+        }
+        [HttpPost]
+        [Route("api/resultado/fn2")]
+        public List<EnvioCompletoModel> GetFueraNormaData2([FromBody] ResultadoFiltroModel resultadoFiltroModel)
+        {
+
+            string strSQL = "SELECT  PCP.CodProducto,";
+            strSQL += "tbl.Referencia, Pa.CodParametro ,tbl.Identificacion,";
+            strSQL += "Pa.NomParametro, ";
+            strSQL += "PCP.NomProducto ,R.ValorResultado,R.ValorEsperado,R.ValorMin,R.ValorMax , tbl.CodCliente,CONVERT(VARCHAR(10), tbl.FecMuestreo, 101) as FecMuestreo ";
+
+            strSQL += GetTablaRelacion();
+            strSQL += "WHERE 1=1 ";
+
+            strSQL += GetCondicionFiltros(resultadoFiltroModel);
+
+
+            DataTable dt1 = Database.execQuery(strSQL);
+
+            List<EnvioCompletoModel> lstResp = new List<EnvioCompletoModel>();
+            foreach (DataRow it in dt1.Rows)
+            {
+
+                EnvioCompletoModel envioC = new EnvioCompletoModel();
+
+                envioC.ValidationState = "1";
+                envioC.LibelleMethode = it["NomParametro"].ToString() + " (" + it["CodParametro"].ToString() + ")"; 
+                envioC.ChoixValeur = "";
+                envioC.ValeurMesure = it["ValorResultado"].ToString();
+                envioC.CodeUnite = "";
+                envioC.ValeurTheorique = it["ValorEsperado"].ToString();
+                envioC.SeuilMini = it["ValorMin"].ToString();
+                envioC.SeuilMaxi = it["ValorMax"].ToString();
+                envioC.AnalyseEffectue = "1";
+                envioC.DateRealisation = it["FecMuestreo"].ToString();
+                envioC.LibelleLabo = "";
+                envioC.Methode = it["Identificacion"].ToString();
+                envioC.RefMethode = it["Identificacion"].ToString();
+                envioC.ValComment = "";
+                envioC.Nuevo = "1";
+                envioC.NumChrono = it["Referencia"].ToString();
+                envioC.Commentaire = "";
+                envioC.RemisPar = "";
+                envioC.ReferenceExterne = it["Referencia"].ToString();
+                envioC.DateEchantillon = it["FecMuestreo"].ToString();
+                envioC.DatePrelevement = it["FecMuestreo"].ToString();
+                envioC.CodeProduit = it["CodProducto"].ToString();
+                envioC.Nutriment = it["NomParametro"].ToString();
+                envioC.CodeFamilia = "";
+                envioC.Especificacion = "";
+
+                lstResp.Add(envioC);
+            }
+
+            return lstResp;
+
+        }
 
     }
-
-
-
 }

@@ -1,5 +1,9 @@
-﻿namespace WSNukaxan.Model
+﻿using Newtonsoft.Json;
+
+namespace WSNukaxan.Model
 {
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
+
     public class ResultadoFiltroModel
     {
         public string TipoConcepto { get; set; }
