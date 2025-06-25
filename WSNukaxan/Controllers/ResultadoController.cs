@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Runtime.Intrinsics.Arm;
 using System.Text.RegularExpressions;
 using WSNukaxan.App_Data;
+using WSNukaxan.Config;
 using WSNukaxan.Model;
 
 
@@ -334,12 +335,16 @@ namespace WSNukaxan.Controllers
         [Route("api/resultado/fn1")]
         public List<EnvioCompletoModel> GetFueraNormaData1([FromBody] ResultadoFiltroModel resultadoFiltroModel)
         {
+            String strFechaInicial = GetFechaFiltro(AppSetConfig.AppSetting["DateInicialFueraNorma"]);
 
             string strSQL = "SELECT distinct tbl.Referencia,PCP.CodProducto,PCP.NomProducto , tbl.CodCliente,tbl.Identificacion,CONVERT(VARCHAR(10), tbl.FecMuestreo, 101) as FecMuestreo," ;
             strSQL += "tbl.CveProveedor,P.NomProveedor,NomOrigen ";
 
             strSQL += GetTablaRelacion();
             strSQL += "WHERE 1=1 ";
+            
+            strSQL += "AND CONVERT(date, tbl.FecMuestreo,112) ";
+            strSQL += "> '" + strFechaInicial +"' ";
 
             strSQL += GetCondicionFiltros(resultadoFiltroModel);
 
@@ -379,7 +384,7 @@ namespace WSNukaxan.Controllers
         [Route("api/resultado/fn2")]
         public List<EnvioCompletoModel> GetFueraNormaData2([FromBody] ResultadoFiltroModel resultadoFiltroModel)
         {
-
+            String strFechaInicial = GetFechaFiltro(AppSetConfig.AppSetting["DateInicialFueraNorma"]);
             string strSQL = "SELECT  PCP.CodProducto,";
             strSQL += "tbl.Referencia, Pa.CodParametro ,tbl.Identificacion,";
             strSQL += "Pa.NomParametro, ";
@@ -387,6 +392,8 @@ namespace WSNukaxan.Controllers
 
             strSQL += GetTablaRelacion();
             strSQL += "WHERE 1=1 ";
+            strSQL += "AND CONVERT(date, tbl.FecMuestreo,112) ";
+            strSQL += "> '" + strFechaInicial + "' ";
 
             strSQL += GetCondicionFiltros(resultadoFiltroModel);
 
